@@ -1,0 +1,5 @@
+view = MapGraphicsView(tileSource=MapTileSourceHere()) #tileSource=MapTileSourceOSM("map.osm")
+    view.scene().setCenter(gpslongitude[0], gpslatitude[0])
+    view.setOptimizationFlag(QGraphicsView.DontSavePainterState, True)
+    view.setRenderHint(QPainter.Antialiasing, True)
+    view.setRenderHint(QPainter.SmoothPixmapTransform, True)

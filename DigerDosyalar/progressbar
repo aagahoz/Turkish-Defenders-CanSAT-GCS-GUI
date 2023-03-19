@@ -1,0 +1,48 @@
+import sys
+from PyQt5 import QtWidgets, QtGui, QtCore
+
+class ProgressBar(QtWidgets.QProgressBar):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # Set the text color and font.
+        font = QtGui.QFont()
+        font.setPixelSize(12)
+        self.setFont(font)
+        self.setStyleSheet("QProgressBar {color: Brown;} QProgressBar::chunk {background-color: Brown")
+
+        # Set the background color.
+        palette = self.palette()
+        palette.setColor(QtGui.QPalette.Highlight, QtCore.Qt.green)
+        self.setPalette(palette)
+
+        # Set the size and appearance of the progress bar.
+        self.setMinimum(0)
+        self.setMaximum(100)
+        self.setFixedHeight(15)
+        self.setTextVisible(False)
+
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # Create a progress bar widget.
+        self.progressBar = ProgressBar()
+
+        # Set the initial value of the progress bar.
+        self.progressBar.setValue(50)
+
+        # Add the progress bar to the layout.
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(self.progressBar)
+
+        # Set the central widget of the main window.
+        widget = QtWidgets.QWidget()
+        widget.setLayout(layout)
+        self.setCentralWidget(widget)
+
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
