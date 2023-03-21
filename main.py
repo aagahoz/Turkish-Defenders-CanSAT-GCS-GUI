@@ -20,6 +20,7 @@ import numpy as np
 from pyqtgraph import PlotWidget
 from PyQt5 import QtWidgets
 import pyqtgraph as pg
+from random import randint
 
 import telemetryClass as tc
 import helperFunctions as hf
@@ -64,6 +65,7 @@ class Example(QMainWindow):
             self.count = 0
             self.connectButtonActivated = False
             self.testDataCounter = 0
+            self.instanceAltitude = 0
 
             # add connect button
             self.connectButton = QPushButton('Connect', self)
@@ -124,9 +126,6 @@ class Example(QMainWindow):
             
             
 
-            for i in range(0, len(testTelemetryDatas)):
-                for j in range(0, len(testTelemetryDatas[i])):
-                    self.telemetryTable.setItem(i, j, QTableWidgetItem(testTelemetryDatas[i][j]))
 
             #chose a row to highlight green
             self.telemetryTable.selectRow(16)
@@ -170,6 +169,23 @@ class Example(QMainWindow):
             self.generalTimer = QTimer()
             self.generalTimer.timeout.connect(self.timerForOneSecond)
             self.generalTimer.start(1000)  # Her 1000 milisaniyede bir timeout sinyali gönderir
+
+            # Plot 1
+            self.AltiudePlot = pg.PlotWidget(self)
+            self.AltiudePlot.setGeometry(50, 180, 280, 200)
+            self.x = list(range(10))  # 100 time points
+            self.y = [randint(0,0) for _ in range(10)]  # 100 data points
+            self.AltiudePlot.setBackground('w')
+            self.AltiudePlot.showGrid(x=True, y=True)
+            pen = pg.mkPen(color=(255, 0, 0))
+            self.data_line =  self.AltiudePlot.plot(self.x, self.y, pen=pen)
+            # Plot 1 Timer
+            self.timer = QtCore.QTimer()
+            self.timer.setInterval(1000)
+            self.timer.timeout.connect(self.update_plot_data)
+            self.timer.start()
+
+            
         
             self.show()
 
@@ -194,6 +210,15 @@ class Example(QMainWindow):
                 # print(testTelemetryDatas[self.count-1])
                 self.updaterInterface()
 
+        def update_plot_data(self):
+            self.x = self.x[1:]  # Remove the first y element.
+            self.x.append(self.x[-1] + 1)  # Add a new value 1 higher than the last.
+
+            self.y = self.y[1:]  # Remove the first 
+            self.y.append(self.instanceAltitude)  # Add a new random value.
+
+            self.data_line.setData(self.x, self.y)  # Update the data.
+
         def updaterInterface(self):
             self.timeText.setText("Mission Time: " + testTelemetryDatas[self.count - 1].mission_time)
             self.telemetryTable.setRowCount(len(testTelemetryDatas))
@@ -208,6 +233,8 @@ class Example(QMainWindow):
                      self.telemetryTable.setItem(i, j, tabloya_eklenecek_veri)
             
             self.telemetryTable.setCurrentCell(len(testTelemetryDatas) - 1, 0)
+            self.instanceAltitude = testTelemetryDatas[i].altitude
+            print(self.instanceAltitude)
 
 
 
