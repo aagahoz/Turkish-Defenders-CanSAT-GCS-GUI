@@ -48,7 +48,7 @@ class Example(QMainWindow):
             # add logo
             self.logo = QLabel(self)
             self.logo.setPixmap(QPixmap('./Main/Images/teamLogoView.png'))
-            self.logo.setGeometry(QtCore.QRect(695, 10, 150, 150))
+            self.logo.setGeometry(QtCore.QRect(695, 10, 130, 130))
             self.logo.setScaledContents(True)
             self.logo.setAlignment(Qt.AlignCenter)
             # change border of logo using rgb
@@ -56,7 +56,11 @@ class Example(QMainWindow):
             #change shape of logo
             self.logo.setMask(self.logo.pixmap().mask())
 
-            
+            self.central_widget = QWidget(self)
+            self.setCentralWidget(self.central_widget)
+
+            self.black_widget = BlackWidget(self.central_widget)
+                
 
             self.initUI()
     
@@ -300,10 +304,10 @@ class Example(QMainWindow):
             self.pitchRollYawText.setFrameStyle(QFrame.Panel | QFrame.Sunken)
             self.pitchRollYawText.setStyleSheet("background-color: white")
             self.pitchRollYawText.show()
-
+  
             # Plot Altitude
             self.AltiudePlot = pg.PlotWidget(self)
-            self.AltiudePlot.setGeometry(50, 180, 280, 200)
+            self.AltiudePlot.setGeometry(100, 190, 280, 200)
             self.xAltitude = list(range(10))  # 100 time points
             self.yAltitude = [randint(0,0) for _ in range(10)]  # 100 data points
             self.AltiudePlot.setBackground('w')
@@ -315,7 +319,7 @@ class Example(QMainWindow):
 
             # Plot Temprature
             self.TempraturePlot = pg.PlotWidget(self)
-            self.TempraturePlot.setGeometry(400, 180, 280, 200)
+            self.TempraturePlot.setGeometry(450, 190, 280, 200)
             self.xTemprature = list(range(10))  # 100 time points
             self.yTemprature = [randint(0,0) for _ in range(10)]  # 100 data points
             self.TempraturePlot.setBackground('w')
@@ -327,7 +331,7 @@ class Example(QMainWindow):
 
             # Plot Pressure
             self.PressurePlot = pg.PlotWidget(self)
-            self.PressurePlot.setGeometry(750, 180, 280, 200)
+            self.PressurePlot.setGeometry(800, 190, 280, 200)
             self.xPressure = list(range(10))  # 100 time points
             self.yPressure = [randint(0,0) for _ in range(10)]  # 100 data points
             self.PressurePlot.setBackground('w')
@@ -339,7 +343,7 @@ class Example(QMainWindow):
 
             # Plot AirSpeed
             self.AirSpeedPlot = pg.PlotWidget(self)
-            self.AirSpeedPlot.setGeometry(50, 430, 280, 200)
+            self.AirSpeedPlot.setGeometry(100, 440, 280, 200)
             self.xAirSpeed = list(range(10))  # 100 time points
             self.yAirSpeed = [randint(0,0) for _ in range(10)]  # 100 data points
             self.AirSpeedPlot.setBackground('w')
@@ -351,7 +355,7 @@ class Example(QMainWindow):
 
             # Plot Voltage
             self.VoltagePlot = pg.PlotWidget(self)
-            self.VoltagePlot.setGeometry(400, 430, 280, 200)
+            self.VoltagePlot.setGeometry(450, 440, 280, 200)
             self.xVoltage = list(range(10))  # 100 time points
             self.yVoltage = [randint(0,0) for _ in range(10)]  # 100 data points
             self.VoltagePlot.setBackground('w')
@@ -363,7 +367,7 @@ class Example(QMainWindow):
 
             # Plot ParticleCount
             self.ParticleCountPlot = pg.PlotWidget(self)
-            self.ParticleCountPlot.setGeometry(750, 430, 280, 200)
+            self.ParticleCountPlot.setGeometry(800, 440, 280, 200)
             self.xParticleCount = list(range(10))  # 100 time points
             self.yParticleCount = [randint(0,0) for _ in range(10)]  # 100 data points
             self.ParticleCountPlot.setBackground('w')
@@ -525,6 +529,14 @@ class Example(QMainWindow):
             self.stateTable.selectRow(self.stateTableCounter)
             self.stateTableCounter += 1
 
+class BlackWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setGeometry(85, 175, 1010, 480)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QBrush(QColor(30, 30, 30)))
 
         
 
