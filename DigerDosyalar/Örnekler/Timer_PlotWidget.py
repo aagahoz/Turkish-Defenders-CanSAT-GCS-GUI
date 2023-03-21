@@ -1,3 +1,5 @@
+# https://www.pythonguis.com/faq/pyqtgraph-plotting-over-time/
+
 from PyQt5 import QtWidgets, QtCore
 from pyqtgraph import PlotWidget, plot
 import pyqtgraph as pg
