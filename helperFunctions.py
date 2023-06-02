@@ -114,11 +114,12 @@ def createRandomTestTelemetryObject():
     telemetryObject.packet_count = RD.randint(0,100)
     telemetryObject.altitude = RD.randint(0,1000)
     telemetryObject.pressure = RD.randint(0,1000)
+    # telemetryObject.pressure = round(RD.uniform(1012, 1013),2)
     telemetryObject.temp = RD.randint(0,50)
     telemetryObject.volt = RD.randint(0,11)
     telemetryObject.gps_time = "10:23:34"
-    telemetryObject.gps_latitude = "42.457432"
-    telemetryObject.gps_longitude = "34.436532"
+    telemetryObject.gps_latitude = 40.741913
+    telemetryObject.gps_longitude = 30.331097
     telemetryObject.altitude = RD.randint(0,1000)
     telemetryObject.gps_sats = RD.randint(0,15)
     telemetryObject.air_speed = RD.randint(0,50)
@@ -130,4 +131,44 @@ def createRandomTestTelemetryObject():
     return telemetryObject
 
 
+import serial.tools.list_ports
 
+def getComList():
+    comlist = serial.tools.list_ports.comports()
+    connected = []
+    for element in comlist:
+        connected.append(element.device)
+    return connected
+
+def getUsbSerialDevices(comList):
+    usbSerialDevices = {}
+    # /dev/cu.usbserial-A50285BI : A50285BI
+
+    for com in comList:
+        # sadece usb seriali al
+        if "usbserial" in com:
+            # /dev/cu.usbserial-A50285BI
+            # A50285BI
+            usbSerialDevices[com] = com.split("-")[1]
+            usbSerialDevices[com] = "COM - " + usbSerialDevices[com]
+    return usbSerialDevices
+
+
+
+
+def virgul_ekleyen_fonksiyon(deger, dosya_yolu):
+    try:
+        with open(dosya_yolu, 'a') as dosya:
+            dosya.write(str(deger) + ',')
+        print("Değer başarıyla dosyaya eklendi.")
+    except IOError:
+        print("Dosya bulunamadı veya açılamadı.")
+
+
+def satir_ekleyen_fonksiyon(deger, dosya_yolu):
+    try:
+        with open(dosya_yolu, 'a') as dosya:
+            dosya.write(str(deger) + '\n')
+        print("Değer başarıyla dosyaya eklendi.")
+    except IOError:
+        print("Dosya bulunamadı veya açılamadı.")

@@ -21,6 +21,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
 
         self.black_widget = BlackWidget(self.central_widget)
+        self.black_widget.setGeometry(10,10,200,200)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
