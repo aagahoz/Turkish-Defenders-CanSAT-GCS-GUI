@@ -13,6 +13,14 @@ import pyqtgraph as pg
 import vtk
 from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
+import sys
+import os
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, \
+    QHBoxLayout, QVBoxLayout
+from PyQt5.QtCore import QUrl
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+
+
 import telemetryClass as tc
 import helperFunctions as hf
 
@@ -26,12 +34,17 @@ testTelemetryDatas = list()
 SELECTED_COM_PORT = '/dev/tty.usbserial-A50285BI'
 SELECTED_COM_BAUD_RATE = 9600
 
-TELEMETRY_TYPES_COLUMNS_NAMES = ["Team ID", "Mission Time", "Packet Count", "Mode", "State", "Altitude", "HS Deployed","PC Deployed", "Mast Raised", "Temp", "Pressure", "Volt", "GPS Time", "GPS Altitude", "GPS Latitude", "GPS Longitude", "GPS SatS", "Tilt X", "Tilt Y", "CMD Echo"]
+TELEMETRY_TYPES_COLUMNS_NAMES = ["Team ID", "Mission Time", "Packet Count", "Mode", "State", "Altitude", "HS Deployed", "PC Deployed",
+                                 "Mast Raised", "Temp", "Pressure", "Volt", "GPS Time", "GPS Altitude", "GPS Latitude", "GPS Longitude", "GPS SatS", "Tilt X", "Tilt Y", "CMD Echo"]
 PROGRAM_NAME = 'Turkish Defenders Ground Station'
 LOGO_PATH = './Main/Images/teamLogoView.png'
 BAUD_RATES_LIST = ["9600", "115200", "230400", "460800", "921600"]
 REFRESH_LOGO_PATH = "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/DigerDosyalar/Örnekler/refresh.png"
 START_3D_MODEL_VIEW = "DigerDosyalar/3DMODELYENI.png"
+
+simModeActive = False
+telemSendModeActive = False
+
 
 
 class Example(QMainWindow):
@@ -62,9 +75,9 @@ class Example(QMainWindow):
         # change shape of logo
         self.logo.setMask(self.logo.pixmap().mask())
 
-        
-        self.ser = serial.Serial(SELECTED_COM_PORT, SELECTED_COM_BAUD_RATE, timeout=1)
-        self.ser.flush()
+        self.player = QMediaPlayer()
+        # self.ser = serial.Serial(SELECTED_COM_PORT, SELECTED_COM_BAUD_RATE, timeout=1)
+        # self.ser.flush()
 
         self.initUI()
 
@@ -102,58 +115,18 @@ class Example(QMainWindow):
         self.black_widget = BlackWidget(self.central_widget)
         self.black_widget.setGeometry(40, 180, 1120, 540)
 
-        # add connect button
-        self.connectButton = QPushButton('Connect', self)
-        self.connectButton.setGeometry(QtCore.QRect(60, 72, 100, 32))
-        self.connectButton.clicked.connect(self.connectButtonFunction)
-        self.connectButton.setFont(QFont("Calibri", 15))
+# ###################################
 
-        # add disconnect button
-        self.disconnectButton = QPushButton('Disconnect', self)
-        self.disconnectButton.setGeometry(QtCore.QRect(176, 72, 120, 32))
-        self.disconnectButton.clicked.connect(self.disconnectButtonFunction)
-        self.disconnectButton.setFont(QFont("Calibri", 15))
-
-        # add enable button
-        self.enableButton = QPushButton('Enable', self)
-        self.enableButton.setGeometry(QtCore.QRect(325, 29, 100, 32))
-        self.enableButton.clicked.connect(self.enableButtonFunction)
-        self.enableButton.setFont(QFont("Calibri", 15))
-
-        # add disable button
-        self.disableButton = QPushButton('Disable', self)
-        self.disableButton.setGeometry(QtCore.QRect(325, 60, 100, 32))
-        self.disableButton.clicked.connect(self.disableButtonFunction)
-        self.disableButton.setFont(QFont("Calibri", 15))
-
-        # add disconnect button
-        self.simulationButton = QPushButton('Simulation', self)
-        self.simulationButton.setGeometry(QtCore.QRect(315, 91, 120, 32))
-        self.simulationButton.clicked.connect(self.simulationButtonFunction)
-        self.simulationButton.setFont(QFont("Calibri", 15))
-
-        # add import csv button
-        self.importCsvButton = QPushButton('Import CSV', self)
-        self.importCsvButton.setGeometry(110, 112, 140, 32)
-        self.importCsvButton.setFont(QFont("Calibri", 15))
-
-        # add table widget button
-        self.telemetryTableButton = QPushButton(self)
-        self.telemetryTableButton.setText("Clear Table")
-        self.telemetryTableButton.setGeometry(QtCore.QRect(1200, 945, 110, 32))
-        # self.telemetryTableButton.clicked.connect(self.cleanTelemetryTableButtonFunction)
-        self.telemetryTableButton.setFont(QFont("Calibri", 15))
-
-        # add save csv button
-        self.save_button = QPushButton("Save To CSV", self)
-        self.save_button.clicked.connect(self.save_to_csv)
-        self.save_button.setGeometry(QtCore.QRect(1310, 945, 130, 32))
-        # self.telemetryTableButton.clicked.connect(self.save_to_csv)
-        self.save_button.setFont(QFont("Calibri", 15))
+        # QIcon nesnesi yükleyin
+        refresh_icon = QIcon(REFRESH_LOGO_PATH)
+        # QPushButton nesnesi oluşturun
+        refresh_button = QPushButton(refresh_icon, "Refresh", self)
+        refresh_button.setGeometry(70, 28, 90, 25)
+        refresh_button.clicked.connect(self.refresh)
 
         # add com selector
         self.comSelector = QComboBox(self)
-        self.comSelector.setGeometry(QtCore.QRect(30, 35, 170, 40))
+        self.comSelector.setGeometry(QtCore.QRect(30, 55, 170, 40))
         # self.comSelector.addItem('COM1')
         # self.comSelector.addItem('COM2')
         # self.comSelector.addItem('COM3')
@@ -162,24 +135,77 @@ class Example(QMainWindow):
         for key, value in self.comList.items():
             self.comSelector.addItem(value)
         self.comSelector.currentTextChanged.connect(self.currentComChanged)
-        self.comSelector.setFont(QFont("Calibri", 16))
+        self.comSelector.setFont(QFont("Times New Roman", 16))
 
         # add baud rate selector
         self.baudrateSelector = QComboBox(self)
-        self.baudrateSelector.setGeometry(QtCore.QRect(200, 35, 100, 40))
+        self.baudrateSelector.setGeometry(QtCore.QRect(200, 55, 100, 40))
         for i in range(len(BAUD_RATES_LIST)):
             self.baudrateSelector.addItem(str(BAUD_RATES_LIST[i]))
 
         self.baudrateSelector.currentTextChanged.connect(
             self.currentBaudrateChanged)
-        self.baudrateSelector.setFont(QFont("Calibri", 16))
+        self.baudrateSelector.setFont(QFont("Times New Roman", 16))
 
-        # QIcon nesnesi yükleyin
-        refresh_icon = QIcon(REFRESH_LOGO_PATH)
-        # QPushButton nesnesi oluşturun
-        refresh_button = QPushButton(refresh_icon, "Refresh", self)
-        refresh_button.setGeometry(70, 8, 90, 25)
-        refresh_button.clicked.connect(self.refresh)
+        # add connect button
+        self.connectButton = QPushButton('Connect', self)
+        self.connectButton.setGeometry(QtCore.QRect(60, 92, 100, 32))
+        self.connectButton.clicked.connect(self.connectButtonFunction)
+        self.connectButton.setFont(QFont("Times New Roman", 15))
+
+        # add disconnect button
+        self.disconnectButton = QPushButton('Disconnect', self)
+        self.disconnectButton.setGeometry(QtCore.QRect(176, 92, 120, 32))
+        self.disconnectButton.clicked.connect(self.disconnectButtonFunction)
+        self.disconnectButton.setFont(QFont("Times New Roman", 15))
+
+# ###################################
+
+        # add enable button
+        self.simEnableButton = QPushButton('Sim Enable', self)
+        self.simEnableButton.setGeometry(QtCore.QRect(325, 55, 120, 32))
+        self.simEnableButton.clicked.connect(self.simEnableButtonFunction)
+        self.simEnableButton.setFont(QFont("Times New Roman", 15))
+
+        # add disable button
+        self.simDisableButton = QPushButton('Sim Disable', self)
+        self.simDisableButton.setGeometry(QtCore.QRect(460, 55, 120, 32))
+        self.simDisableButton.clicked.connect(self.simDisableButtonFunction)
+        self.simDisableButton.setFont(QFont("Times New Roman", 15))
+
+         # add import csv button
+        self.importCsvButton = QPushButton('Import CSV', self)
+        self.importCsvButton.setGeometry(380, 88, 140, 32)
+        self.simDisableButton.clicked.connect(self.importCsvButtonFunction)
+        self.importCsvButton.setFont(QFont("Times New Roman", 15))
+
+        # add CX On button
+        self.telemetryOnButton = QPushButton('Telem On', self)
+        self.telemetryOnButton.setGeometry(QtCore.QRect(345, 120, 100, 32))
+        self.telemetryOnButton.clicked.connect(self.telemetryOnButtonFunction)
+        self.telemetryOnButton.setFont(QFont("Times New Roman", 15))
+
+        # add CX Off button
+        self.telemetryOffButton = QPushButton('Telem Off', self)
+        self.telemetryOffButton.setGeometry(QtCore.QRect(445, 120, 100, 32))
+        self.telemetryOffButton.clicked.connect(self.telemetryOffButtonFunction)
+        self.telemetryOffButton.setFont(QFont("Times New Roman", 15))
+    
+# ###################################
+
+        # add table widget button
+        self.telemetryTableButton = QPushButton(self)
+        self.telemetryTableButton.setText("Clear Table")
+        self.telemetryTableButton.setGeometry(QtCore.QRect(1200, 945, 110, 32))
+        # self.telemetryTableButton.clicked.connect(self.cleanTelemetryTableButtonFunction)
+        self.telemetryTableButton.setFont(QFont("Times New Roman", 15))
+
+        # add save csv button
+        # self.saveData2CsvFile = QPushButton("Save To CSV", self)
+        # self.saveData2CsvFile.clicked.connect(self.saveData2CsvFileFunction)
+        # self.saveData2CsvFile.setGeometry(QtCore.QRect(1310, 945, 130, 32))
+        # self.telemetryTableButton.clicked.connect(self.saveData2CsvFileFunction)
+        # self.saveData2CsvFile.setFont(QFont("Times New Roman", 15))
 
         # add progress bar
         self.progressBar = QtWidgets.QProgressBar(self)
@@ -209,7 +235,8 @@ class Example(QMainWindow):
 
         self.telemetryTable.setColumnCount(20)
         self.telemetryTable.setRowCount(10)
-        self.telemetryTable.setHorizontalHeaderLabels(TELEMETRY_TYPES_COLUMNS_NAMES)
+        self.telemetryTable.setHorizontalHeaderLabels(
+            TELEMETRY_TYPES_COLUMNS_NAMES)
         # print(self.telemetryTable.rowCount())
         self.telemetryTable.setSortingEnabled(True)
         self.telemetryTable.setCornerButtonEnabled(False)
@@ -242,9 +269,9 @@ class Example(QMainWindow):
         self.telemetryTable.setColumnWidth(14, 45)  # pitch
         self.telemetryTable.setColumnWidth(15, 45)  # roll
         self.telemetryTable.setColumnWidth(16, 45)  # yaw
-        self.telemetryTable.setColumnWidth(17, 45)  # 
-        self.telemetryTable.setColumnWidth(18, 45)  # 
-        self.telemetryTable.setColumnWidth(19, 45)  # 
+        self.telemetryTable.setColumnWidth(17, 45)  #
+        self.telemetryTable.setColumnWidth(18, 45)  #
+        self.telemetryTable.setColumnWidth(19, 45)  #
         # set table row height
         for i in range(0, self.telemetryTable.rowCount()):
             self.telemetryTable.setRowHeight(i, 20)
@@ -275,7 +302,7 @@ class Example(QMainWindow):
         # add time label
         timeString = "Mission Time: "
         self.timeText = QLabel(self)
-        self.timeText.setGeometry(460, 45, 180, 30)
+        self.timeText.setGeometry(360, 15, 180, 30)
         self.timeText.setFont(QFont('Arial', 15))
         self.timeText.setText(timeString + "00:00:00")
         self.timeText.setAlignment(Qt.AlignCenter)
@@ -483,6 +510,9 @@ class Example(QMainWindow):
 
         self.show()
 
+    def refresh(self):
+        print("Refresh button clicked")
+
     def connectButtonFunction(self):
         self.connectButtonActivated = True
         print("connectButtonFunction")
@@ -491,25 +521,31 @@ class Example(QMainWindow):
         self.connectButtonActivated = False
         print("disconnectButtonFunction")
 
-    def enableButtonFunction(self):
-        print("enableButtonFunction")
+    def simEnableButtonFunction(self):
+        print("simEnableButtonFunction")
 
-    def disableButtonFunction(self):
-        print("disableButtonFunction")
+    def simDisableButtonFunction(self):
+        print("simDisableButtonFunction")
+        
+    def importCsvButtonFunction(self):
+        print("importCsvButtonFunction")
 
+    def telemetryOnButtonFunction(self):
+        print("telemetryOnButtonFunction")
+
+    def telemetryOffButtonFunction(self):
+        print("telemetryOffButtonFunction")
+    
     def currentBaudrateChanged(self):
         print(self.baudrateSelector.currentText())
         print(self.baudrateSelector.currentIndex())
 
-    def currentComChanged(self):  
+    def currentComChanged(self):
         print(self.comSelector.currentText())
         print(self.comSelector.currentIndex())
 
-    def refresh(self):
-        print("Refresh button clicked")
-
-    def simulationButtonFunction(self):
-        print("simulationButtonFunction")
+    def saveData2CsvFileFunction(self):
+        print("saveData2CsvFileFunction")
 
     def cleanTelemetryTableButtonFunction(self):
         print("cleanTelemetryTableButtonFunction")
@@ -517,59 +553,56 @@ class Example(QMainWindow):
 
     def update_plots_data(self):
 
-        print("SONX: temp, press ", self.instanceTemprature , self.instancePressure)
-
-        self.instanceTemprature = float(self.instanceTemprature)
-        self.xTemprature = self.xTemprature[1:]  # Remove the first y element.
-        self.xTemprature.append(self.xTemprature[-1] + 1)
-        self.yTemprature = self.yTemprature[1:]  # Remove the first
-        self.yTemprature.append(self.instanceTemprature)
-        self.data_line_temprature.setData(self.xTemprature, self.yTemprature)
-
-
-        self.instancePressure = float(self.instancePressure)
-        self.xPressure = self.xPressure[1:]  # Remove the first y element.
-        self.xPressure.append(self.xPressure[-1] + 1)
-        self.yPressure = self.yPressure[1:]  # Remove the first
-        self.yPressure.append(self.instancePressure)  # Add a new random value.
-        self.data_line_pressure.setData(self.xPressure, self.yPressure)
-
-
-        self.instanceAltitude = float(self.instanceAltitude)
-        self.xAltitude = self.xAltitude[1:]  # Remove the first y element.
-        self.xAltitude.append(self.xAltitude[-1] + 1)
-        self.yAltitude = self.yAltitude[1:]  # Remove the first
-        self.yAltitude.append(self.instanceAltitude)  # Add a new random value.
-        self.instanceAltitude = 1
-        self.data_line_altitude.setData(self.xAltitude, self.yAltitude)
-
-        self.instanceAccelX = float(self.instanceAccelX)
-        self.xAirSpeed = self.xAirSpeed[1:]  # Remove the first y element.
-        self.xAirSpeed.append(self.xAirSpeed[-1] + 1)
-        self.yAirSpeed = self.yAirSpeed[1:]  # Remove the first
-        self.yAirSpeed.append(self.instanceAccelX)  # Add a new random value.
-        self.instanceAirSpeed = 0
-        self.data_line_airspeed.setData(self.xAirSpeed, self.yAirSpeed)
-        self.instanceAltitude = float(self.instanceAltitude)
-
-        self.instanceAccelY = float(self.instanceAccelY)
-        self.xVoltage = self.xVoltage[1:]  # Remove the first y element.
-        self.xVoltage.append(self.xVoltage[-1] + 1)
-        self.yVoltage = self.yVoltage[1:]  # Remove the first
-        self.yVoltage.append(self.instanceAccelY)  # Add a new random value.
-        self.instanceVoltage = 0
-        self.data_line_voltage.setData(self.xVoltage, self.yVoltage)
+        # print("SONX: temp, press ", self.instanceTemprature, self.instancePressure)
         
-        self.instanceAccelZ = float(self.instanceAccelZ)
-        self.xParticleCount = self.xParticleCount[1:]
-        self.xParticleCount.append(self.xParticleCount[-1] + 1)
-        self.yParticleCount = self.yParticleCount[1:]  # Remove the first
-        self.yParticleCount.append(self.instanceAccelZ)
-        self.instanceParticleCount = 0
-        # Update the data.
-        self.data_line_particlecount.setData(self.xParticleCount, self.yParticleCount)
-        
+        # self.instanceTemprature = float(self.instanceTemprature)
+        # self.xTemprature = self.xTemprature[1:]  # Remove the first y element.
+        # self.xTemprature.append(self.xTemprature[-1] + 1)
+        # self.yTemprature = self.yTemprature[1:]  # Remove the first
+        # self.yTemprature.append(self.instanceTemprature)
+        # self.data_line_temprature.setData(self.xTemprature, self.yTemprature)
 
+        # self.instancePressure = float(self.instancePressure)
+        # self.xPressure = self.xPressure[1:]  # Remove the first y element.
+        # self.xPressure.append(self.xPressure[-1] + 1)
+        # self.yPressure = self.yPressure[1:]  # Remove the first
+        # self.yPressure.append(self.instancePressure)  # Add a new random value.
+        # self.data_line_pressure.setData(self.xPressure, self.yPressure)
+
+        # self.instanceAltitude = float(self.instanceAltitude)
+        # self.xAltitude = self.xAltitude[1:]  # Remove the first y element.
+        # self.xAltitude.append(self.xAltitude[-1] + 1)
+        # self.yAltitude = self.yAltitude[1:]  # Remove the first
+        # self.yAltitude.append(self.instanceAltitude)  # Add a new random value.
+        # self.instanceAltitude = 1
+        # self.data_line_altitude.setData(self.xAltitude, self.yAltitude)
+
+        # self.instanceAccelX = float(self.instanceAccelX)
+        # self.xAirSpeed = self.xAirSpeed[1:]  # Remove the first y element.
+        # self.xAirSpeed.append(self.xAirSpeed[-1] + 1)
+        # self.yAirSpeed = self.yAirSpeed[1:]  # Remove the first
+        # self.yAirSpeed.append(self.instanceAccelX)  # Add a new random value.
+        # self.instanceAirSpeed = 0
+        # self.data_line_airspeed.setData(self.xAirSpeed, self.yAirSpeed)
+        # self.instanceAltitude = float(self.instanceAltitude)
+
+        # self.instanceAccelY = float(self.instanceAccelY)
+        # self.xVoltage = self.xVoltage[1:]  # Remove the first y element.
+        # self.xVoltage.append(self.xVoltage[-1] + 1)
+        # self.yVoltage = self.yVoltage[1:]  # Remove the first
+        # self.yVoltage.append(self.instanceAccelY)  # Add a new random value.
+        # self.instanceVoltage = 0
+        # self.data_line_voltage.setData(self.xVoltage, self.yVoltage)
+
+        # self.instanceAccelZ = float(self.instanceAccelZ)
+        # self.xParticleCount = self.xParticleCount[1:]
+        # self.xParticleCount.append(self.xParticleCount[-1] + 1)
+        # self.yParticleCount = self.yParticleCount[1:]  # Remove the first
+        # self.yParticleCount.append(self.instanceAccelZ)
+        # self.instanceParticleCount = 0
+        # # Update the data.
+        # self.data_line_particlecount.setData(
+            # self.xParticleCount, self.yParticleCount)
 
         self.instanceTemprature = 0
         self.instancePressure = 0
@@ -577,19 +610,19 @@ class Example(QMainWindow):
         self.instanceAccelX = 0
         self.instanceAccelY = 0
         self.instanceAccelZ = 0
-        
+
     def timerForOneSecond(self):
         if self.connectButtonActivated == True:
+            if hasattr(self, 'ser'):
+                self.line = self.ser.readline().decode('utf-8').rstrip()
+                self.commaData = altitudeSilinecek.parseData(self.line)
+                self.commaData.append("SON")
+                self.COUNTER_FROM_START = self.COUNTER_FROM_START + 1
+                print(" [INFO - COUNTER]   ", self.COUNTER_FROM_START)
+                self.updaterInterface()
+            else:
+                print("XBEE bağlı değil")
 
-            # telemetryDataS = hf.createRandomTestTelemetryObject()
-            self.line = self.ser.readline().decode('utf-8').rstrip()
-            self.commaData = altitudeSilinecek.parseData(self.line)
-            self.commaData.append("SON") # ! kaldırılacak
-
-            # testTelemetryDatas.append(telemetryDataS)
-            self.COUNTER_FROM_START = self.COUNTER_FROM_START + 1
-            print(" [INFO - COUNTER]   ", self.COUNTER_FROM_START)
-            self.updaterInterface()
 
     def checkNewDataAndCreateTelemetryObject(self, listData):
         newObject = tc.TelemetryData()
@@ -602,21 +635,23 @@ class Example(QMainWindow):
         current_time = QTime.currentTime()
         time_text = current_time.toString('hh:mm:ss')
         newObject.mission_time = time_text
-        newObject.packet_count = self.packetCount 
+        newObject.packet_count = self.packetCount
         self.packetCount += 1
         return newObject
-                    
+
     def updaterInterface(self):
 
         # self.newTelemetryObject = self.turnListToTelemetryObject(self.commaData)
-        self.newTelemetryObject = self.checkNewDataAndCreateTelemetryObject(self.commaData)
+        self.newTelemetryObject = self.checkNewDataAndCreateTelemetryObject(
+            self.commaData)
 
         # print(self.newTelemetryObject)
         testTelemetryDatas.append(self.newTelemetryObject)
         print(testTelemetryDatas[len(testTelemetryDatas) - 1])
-        
+
         if testTelemetryDatas[len(testTelemetryDatas) - 1].mission_time != None:
-            self.timeText.setText("Mission Time: " + testTelemetryDatas[len(testTelemetryDatas) - 1].mission_time)
+            self.timeText.setText(
+                "Mission Time: " + testTelemetryDatas[len(testTelemetryDatas) - 1].mission_time)
             self.telemetryTable.setRowCount(len(testTelemetryDatas))
             for i in range(0, len(testTelemetryDatas)):
                 tempList = testTelemetryDatas[i]
@@ -628,29 +663,40 @@ class Example(QMainWindow):
                     self.telemetryTable.setItem(i, j, tabloya_eklenecek_veri)
 
             self.telemetryTable.setCurrentCell(len(testTelemetryDatas) - 1, 0)
-            self.instanceAltitude = testTelemetryDatas[len(testTelemetryDatas) - 1].altitude
+            self.instanceAltitude = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].altitude
             self.instanceTemprature = testTelemetryDatas[i].temp
             self.instancePressure = testTelemetryDatas[i].pressure
             # # self.instanceAirSpeed = testTelemetryDatas[i].air_speed
             # self.instanceVoltage = testTelemetryDatas[i].volt
             # # self.instanceParticleCount = testTelemetryDatas[i].particle_count
-            self.instanceLatitude = testTelemetryDatas[len(testTelemetryDatas) - 1].gps_latitude
-            self.instanceLongtitude = testTelemetryDatas[len(testTelemetryDatas) - 1].gps_longitude
-            self.instanceGpsAltitude = testTelemetryDatas[len(testTelemetryDatas) - 1].gps_altitude
-            self.instanceSatS = testTelemetryDatas[len(testTelemetryDatas) - 1].gps_sats
-            self.instancePitch = testTelemetryDatas[len(testTelemetryDatas) - 1].tilt_x
-            self.instanceRoll = testTelemetryDatas[len(testTelemetryDatas) - 1].tilt_y
-            self.instanceAccelX = testTelemetryDatas[len(testTelemetryDatas) - 1].accelX
-            self.instanceAccelY = testTelemetryDatas[len(testTelemetryDatas) - 1].accelY
-            self.instanceAccelZ = testTelemetryDatas[len(testTelemetryDatas) - 1].accelZ
-            print("ACCEL X Y Z ", self.instanceAccelX,self.instanceAccelX,self.instanceAccelX)
+            self.instanceLatitude = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].gps_latitude
+            self.instanceLongtitude = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].gps_longitude
+            self.instanceGpsAltitude = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].gps_altitude
+            self.instanceSatS = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].gps_sats
+            self.instancePitch = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].tilt_x
+            self.instanceRoll = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].tilt_y
+            self.instanceAccelX = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].accelX
+            self.instanceAccelY = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].accelY
+            self.instanceAccelZ = testTelemetryDatas[len(
+                testTelemetryDatas) - 1].accelZ
+            print("ACCEL X Y Z ", self.instanceAccelX,
+                  self.instanceAccelX, self.instanceAccelX)
 
             self.altitudeText.setText(
                 "Altitude: {} m".format(self.instanceAltitude))
             self.latitudeLongitudeAltitudeSatsText.setText("Lat: {}  Long: {}  Alt: {} m  Sats: {}".format(
                 self.instanceLatitude, self.instanceLongtitude, self.instanceGpsAltitude, self.instanceSatS))
             self.pitchRollYawText.setText("      Pitch: {}°              Roll: {}°".format(
-            self.instancePitch, self.instanceRoll))
+                self.instancePitch, self.instanceRoll))
 
             # if self.progressBarCounter >= 100:
             #     self.progressBarCounter = 0
@@ -664,28 +710,27 @@ class Example(QMainWindow):
             # self.stateTable.selectRow(self.stateTableCounter)
             # self.stateTableCounter += 1
 
-            self.instanceLatitude, self.instanceLongtitude = 40.739969, 30.331882 # ! Burası silinecek 
+            self.instanceLatitude, self.instanceLongtitude = 40.739969, 30.331882  # ! Burası silinecek
             self.mapView.load(QUrl("https://www.openstreetmap.org/#map=14/{}/{}".format(
                 self.instanceLatitude, self.instanceLongtitude)))
-            
 
             print("SELF PRESSURE ", self.instancePressure)
 
-            hf.virgul_ekleyen_fonksiyon(self.instancePressure, "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/basinc.txt")
-            hf.virgul_ekleyen_fonksiyon(self.instanceTemprature, "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/sicaklik.txt")
-            hf.virgul_ekleyen_fonksiyon(self.instanceAltitude, "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/yukseklik.txt")
-            hf.virgul_ekleyen_fonksiyon(self.instanceAccelX, "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/accelX.txt")
-            hf.virgul_ekleyen_fonksiyon(self.instanceAccelY, "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/accelY.txt")
-            hf.virgul_ekleyen_fonksiyon(self.instanceAccelZ, "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/accelZ.txt")
-            hf.satir_ekleyen_fonksiyon(testTelemetryDatas[len(testTelemetryDatas) - 1].getDataCommaSeparated(), "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/telemetryData.txt")
-            
-            print("LIST " ,testTelemetryDatas[5], testTelemetryDatas[5], testTelemetryDatas[5], testTelemetryDatas[5])
+            # hf.satir_ekleyen_fonksiyon(testTelemetryDatas[len(testTelemetryDatas) - 1].getDataCommaSeparated(), "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/telemetryData.txt")
+
+            print("LIST ", testTelemetryDatas[5], testTelemetryDatas[5],
+                  testTelemetryDatas[5], testTelemetryDatas[5])
         else:
             print(" [INFO] None Data Error")
-            
 
+    def playAudioFile(self):
+        # full_file_path = os.path.join(os.getcwd(), '/Users/agahozdemir/Desktop/Sakarya University.mp3')
+        # url = QUrl.fromLocalFile(full_file_path)
+        # content = QMediaContent(url)
 
-
+        # self.player.setMedia(content)
+        # self.player.play()
+        pass
 
     def update_battery_percentage(self):
         output = subprocess.check_output(
@@ -701,9 +746,6 @@ class Example(QMainWindow):
         current_time = QTime.currentTime()
         time_text = current_time.toString('hh:mm:ss')
         self.timeLabel.setText(time_text)
-
-    def save_to_csv(self):
-        pass
 
     def showExitDialog(self):
         msgBox = QMessageBox()
