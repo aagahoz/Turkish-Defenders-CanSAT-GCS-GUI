@@ -108,25 +108,75 @@ def testDataReturner():
     return dataS
 
 def createRandomTestTelemetryObject():
+    # telemetryObject = TC.TelemetryData()
+    # telemetryObject.team_id = 1007
+    # # telemetryObject.mission_time = "00:00:31"
+    # telemetryObject.packet_count = RD.randint(0,100)
+    # telemetryObject.altitude = RD.randint(0,1000)
+    # telemetryObject.pressure = RD.randint(0,1000)
+    # # telemetryObject.pressure = round(RD.uniform(1012, 1013),2)
+    # telemetryObject.temp = RD.randint(0,50)
+    # telemetryObject.volt = RD.randint(0,11)
+    # telemetryObject.gps_time = "10:23:34"
+    # telemetryObject.gps_latitude = 40.741913
+    # telemetryObject.gps_longitude = 30.331097
+    # telemetryObject.altitude = RD.randint(0,1000)
+    # telemetryObject.gps_sats = RD.randint(0,15)
+    # telemetryObject.air_speed = RD.randint(0,50)
+    # telemetryObject.particle_count = RD.randint(0,1000)
+    # telemetryObject.pitch = RD.randint(0, 180)
+    # telemetryObject.roll = RD.randint(0,180)
+    # telemetryObject.yaw = RD.randint(0,180)
+
+
+    # self.team_id = None
+    # self.mission_time = None
+    # self.packet_count = None
+    # self.mode = None
+    # self.state = None
+    # self.altitude = None
+    # self.hs_deployed = None
+    # self.pc_deployed = None
+    # self.mast_raised = None
+    # self.temp = None
+    # self.pressure = None
+    # self.volt = None
+    # self.gps_time = None
+    # self.gps_altitude = None
+    # self.gps_latitude = None
+    # self.gps_longitude = None
+    # self.gps_sats = None
+    # self.tilt_x = None
+    # self.tilt_y = None
+    # self.cmd_echo = None
+    # self.accelX = None
+    # self.accelY = None
+    # self.accelZ = None
+
     telemetryObject = TC.TelemetryData()
     telemetryObject.team_id = 1007
-    # telemetryObject.mission_time = "00:00:31"
+    telemetryObject.mission_time = "00:00:31"
     telemetryObject.packet_count = RD.randint(0,100)
+    telemetryObject.mode = "F"
+    telemetryObject.state = "A"
     telemetryObject.altitude = RD.randint(0,1000)
-    telemetryObject.pressure = RD.randint(0,1000)
-    # telemetryObject.pressure = round(RD.uniform(1012, 1013),2)
+    telemetryObject.hs_deployed = RD.randint(0,100)
+    telemetryObject.pc_deployed = RD.randint(0,100)
+    telemetryObject.mast_raised = RD.randint(0,100)
     telemetryObject.temp = RD.randint(0,50)
+    telemetryObject.pressure = RD.randint(0,1000)
     telemetryObject.volt = RD.randint(0,11)
     telemetryObject.gps_time = "10:23:34"
-    telemetryObject.gps_latitude = 40.741913
-    telemetryObject.gps_longitude = 30.331097
-    telemetryObject.altitude = RD.randint(0,1000)
+    telemetryObject.gps_altitude = RD.randint(0,1000)
+    telemetryObject.gps_latitude = 30.331097
+    telemetryObject.gps_longitude = -111.890123
     telemetryObject.gps_sats = RD.randint(0,15)
-    telemetryObject.air_speed = RD.randint(0,50)
-    telemetryObject.particle_count = RD.randint(0,1000)
-    telemetryObject.pitch = RD.randint(0, 180)
-    telemetryObject.roll = RD.randint(0,180)
-    telemetryObject.yaw = RD.randint(0,180)
+    telemetryObject.tilt_x = RD.randint(0,100)
+    telemetryObject.tilt_y = RD.randint(0,100)
+    telemetryObject.cmd_echo = "IDK"
+    telemetryObject.accelX = RD.randint(0,180)
+    telemetryObject.accelY = RD.randint(0,180)
+    telemetryObject.accelZ = RD.randint(0,180)
 
     return telemetryObject
 

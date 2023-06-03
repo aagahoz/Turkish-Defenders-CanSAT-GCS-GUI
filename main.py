@@ -10,9 +10,6 @@ import subprocess
 from random import randint
 import pyqtgraph as pg
 
-import vtk
-from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
-
 import sys
 import os
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, \
@@ -27,9 +24,7 @@ import helperFunctions as hf
 import serial
 import time
 
-telemetryDataS = tc.TelemetryData()
-altitudeSilinecek = tc.TelemetryData()
-testTelemetryDatas = list()
+
 
 SELECTED_COM_PORT = '/dev/tty.usbserial-A50285BI'
 SELECTED_COM_BAUD_RATE = 9600
@@ -41,9 +36,6 @@ LOGO_PATH = './Main/Images/teamLogoView.png'
 BAUD_RATES_LIST = ["9600", "115200", "230400", "460800", "921600"]
 REFRESH_LOGO_PATH = "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/DigerDosyalar/Örnekler/refresh.png"
 START_3D_MODEL_VIEW = "DigerDosyalar/3DMODELYENI.png"
-
-simModeActive = False
-telemSendModeActive = False
 
 
 
@@ -110,12 +102,35 @@ class Example(QMainWindow):
 
         self.isFullScreen = False
 
+        self.simModeActive = False
+        self.telemSendModeActive = False
+
+        self.isGcsTestModeActive = False
+        self.isSerialPortActive = False
+        self.isStartProgramActive = False
+
+        self.telemetryDataS = tc.TelemetryData()
+        self.testTelemetryDatas = list()
+
+
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
         self.black_widget = BlackWidget(self.central_widget)
         self.black_widget.setGeometry(40, 180, 1120, 540)
 
 # ###################################
+
+        # add start button
+        self.startButton = QPushButton('Start Program', self)
+        self.startButton.setGeometry(QtCore.QRect(70, 5, 130, 32))
+        self.startButton.clicked.connect(self.startProgramButtonFunction)
+        self.startButton.setFont(QFont("Times New Roman", 15))
+
+        # add Stop button
+        self.stopButton = QPushButton('Stop Program', self)
+        self.stopButton.setGeometry(QtCore.QRect(200, 5, 130, 32))
+        self.stopButton.clicked.connect(self.stopProgramButtonFunction)
+        self.stopButton.setFont(QFont("Times New Roman", 15))
 
         # QIcon nesnesi yükleyin
         refresh_icon = QIcon(REFRESH_LOGO_PATH)
@@ -159,6 +174,13 @@ class Example(QMainWindow):
         self.disconnectButton.clicked.connect(self.disconnectButtonFunction)
         self.disconnectButton.setFont(QFont("Times New Roman", 15))
 
+        # add test mode button
+        self.testModeActiveButton = QPushButton('Test Mode Activate', self)
+        self.testModeActiveButton.setGeometry(QtCore.QRect(100, 132, 150, 32))
+        self.testModeActiveButton.clicked.connect(
+            self.testModeActiveButtonFunction)
+        self.testModeActiveButton.setFont(QFont("Times New Roman", 15))
+
 # ###################################
 
         # add enable button
@@ -173,10 +195,10 @@ class Example(QMainWindow):
         self.simDisableButton.clicked.connect(self.simDisableButtonFunction)
         self.simDisableButton.setFont(QFont("Times New Roman", 15))
 
-         # add import csv button
+        # add import csv button
         self.importCsvButton = QPushButton('Import CSV', self)
         self.importCsvButton.setGeometry(380, 88, 140, 32)
-        self.simDisableButton.clicked.connect(self.importCsvButtonFunction)
+        self.importCsvButton.clicked.connect(self.importCsvButtonFunction)
         self.importCsvButton.setFont(QFont("Times New Roman", 15))
 
         # add CX On button
@@ -188,9 +210,10 @@ class Example(QMainWindow):
         # add CX Off button
         self.telemetryOffButton = QPushButton('Telem Off', self)
         self.telemetryOffButton.setGeometry(QtCore.QRect(445, 120, 100, 32))
-        self.telemetryOffButton.clicked.connect(self.telemetryOffButtonFunction)
+        self.telemetryOffButton.clicked.connect(
+            self.telemetryOffButtonFunction)
         self.telemetryOffButton.setFont(QFont("Times New Roman", 15))
-    
+
 # ###################################
 
         # add table widget button
@@ -311,7 +334,7 @@ class Example(QMainWindow):
 
         # Timer'ın oluşturulması
         self.generalTimer = QTimer()
-        self.generalTimer.timeout.connect(self.timerForOneSecond)
+        self.generalTimer.timeout.connect(self.MAIN__LOOP)
         # Her 1000 milisaniyede bir timeout sinyali gönderir
         self.generalTimer.start(1000)
 
@@ -510,6 +533,14 @@ class Example(QMainWindow):
 
         self.show()
 
+    def startProgramButtonFunction(self):
+        self.isStartProgramActive = True
+        print("startProgramButtonFunction")
+
+    def stopProgramButtonFunction(self):
+        self.isStartProgramActive = False
+        print("stopProgramButtonFunction")
+
     def refresh(self):
         print("Refresh button clicked")
 
@@ -521,21 +552,26 @@ class Example(QMainWindow):
         self.connectButtonActivated = False
         print("disconnectButtonFunction")
 
+    def testModeActiveButtonFunction(self):
+        self.isGcsTestModeActive = True
+        print("testModeActiveButtonFunction")
+
     def simEnableButtonFunction(self):
         print("simEnableButtonFunction")
 
     def simDisableButtonFunction(self):
         print("simDisableButtonFunction")
-        
+
     def importCsvButtonFunction(self):
         print("importCsvButtonFunction")
+        pass
 
     def telemetryOnButtonFunction(self):
         print("telemetryOnButtonFunction")
 
     def telemetryOffButtonFunction(self):
         print("telemetryOffButtonFunction")
-    
+
     def currentBaudrateChanged(self):
         print(self.baudrateSelector.currentText())
         print(self.baudrateSelector.currentIndex())
@@ -549,12 +585,12 @@ class Example(QMainWindow):
 
     def cleanTelemetryTableButtonFunction(self):
         print("cleanTelemetryTableButtonFunction")
-        self.telemetryTable.clearContents()
+        # self.telemetryTable.clearContents()
 
     def update_plots_data(self):
 
         # print("SONX: temp, press ", self.instanceTemprature, self.instancePressure)
-        
+
         # self.instanceTemprature = float(self.instanceTemprature)
         # self.xTemprature = self.xTemprature[1:]  # Remove the first y element.
         # self.xTemprature.append(self.xTemprature[-1] + 1)
@@ -602,7 +638,7 @@ class Example(QMainWindow):
         # self.instanceParticleCount = 0
         # # Update the data.
         # self.data_line_particlecount.setData(
-            # self.xParticleCount, self.yParticleCount)
+        # self.xParticleCount, self.yParticleCount)
 
         self.instanceTemprature = 0
         self.instancePressure = 0
@@ -611,125 +647,216 @@ class Example(QMainWindow):
         self.instanceAccelY = 0
         self.instanceAccelZ = 0
 
-    def timerForOneSecond(self):
-        if self.connectButtonActivated == True:
-            if hasattr(self, 'ser'):
-                self.line = self.ser.readline().decode('utf-8').rstrip()
-                self.commaData = altitudeSilinecek.parseData(self.line)
-                self.commaData.append("SON")
-                self.COUNTER_FROM_START = self.COUNTER_FROM_START + 1
-                print(" [INFO - COUNTER]   ", self.COUNTER_FROM_START)
-                self.updaterInterface()
-            else:
-                print("XBEE bağlı değil")
+    def MAIN__LOOP(self):
+        print("[1- INFO]  MAIN LOOP Active")
+        
+        if self.isStartProgramActive == True:
+            print("[2- INFO]  isStartProgramActive = Active")
 
+            self.newObject = tc.TelemetryData()
+
+            if self.isGcsTestModeActive == True:
+                print("[3- INFO] isGcsTestModeActive = Active")
+                self.newObject = hf.createRandomTestTelemetryObject()
+
+            elif self.isGcsTestModeActive == False and self.isSerialPortActive == True:
+                print("[4- INFO] isGcsTestModeActive = Passive, isSerialPortActive = Active")
+
+                if hasattr(self, 'ser'):
+                    self.line = self.ser.readline().decode('utf-8').rstrip()
+                    self.commaData = telemetryDataS.parseData(self.line)
+
+                    print("LEN: ", len(self.commaData))
+                    if len(self.commaData) == 23:
+                        if self.commaData[0] == '1007':
+                            self.newObject.setDatabyCommaSepratedDataList(
+                                self.commaData)
+
+            if self.isGcsTestModeActive == True or self.isSerialPortActive == True:
+                print("[5- INFO] isGcsTestModeActive = Active or isSerialPortActive = Active ")
+                self.testTelemetryDatas.append(self.newObject)
+                print(self.testTelemetryDatas[len(self.testTelemetryDatas) - 1])
+
+                if self.testTelemetryDatas[len(self.testTelemetryDatas) - 1].mission_time != None:
+                    self.timeText.setText(
+                        "Mission Time: " + self.testTelemetryDatas[len(self.testTelemetryDatas) - 1].mission_time)
+                    self.telemetryTable.setRowCount(len(self.testTelemetryDatas))
+                    for i in range(0, len(self.testTelemetryDatas)):
+                        tempList = self.testTelemetryDatas[i]
+                        for j in range(0, len(self.testTelemetryDatas[i].getDataAsList())):
+                            tabloya_eklenecek_veri = tempList.getDataAsList()
+                            tabloya_eklenecek_veri = tabloya_eklenecek_veri[j]
+                            tabloya_eklenecek_veri = QTableWidgetItem(
+                                str(tabloya_eklenecek_veri))
+                            self.telemetryTable.setItem(
+                                i, j, tabloya_eklenecek_veri)
+
+                    self.telemetryTable.setCurrentCell(
+                        len(self.testTelemetryDatas) - 1, 0)
+                    self.instanceAltitude = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].altitude
+                    self.instanceTemprature = self.testTelemetryDatas[i].temp
+                    self.instancePressure = self.testTelemetryDatas[i].pressure
+                    # # self.instanceAirSpeed = testTelemetryDatas[i].air_speed
+                    # self.instanceVoltage = testTelemetryDatas[i].volt
+                    # # self.instanceParticleCount = testTelemetryDatas[i].particle_count
+                    self.instanceLatitude = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].gps_latitude
+                    self.instanceLongtitude = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].gps_longitude
+                    self.instanceGpsAltitude = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].gps_altitude
+                    self.instanceSatS = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].gps_sats
+                    self.instancePitch = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].tilt_x
+                    self.instanceRoll = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].tilt_y
+                    self.instanceAccelX = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].accelX
+                    self.instanceAccelY = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].accelY
+                    self.instanceAccelZ = self.testTelemetryDatas[len(
+                        self.testTelemetryDatas) - 1].accelZ
+                    print("ACCEL X Y Z ", self.instanceAccelX,
+                          self.instanceAccelX, self.instanceAccelX)
+
+                    self.altitudeText.setText(
+                        "Altitude: {} m".format(self.instanceAltitude))
+                    self.latitudeLongitudeAltitudeSatsText.setText("Lat: {}  Long: {}  Alt: {} m  Sats: {}".format(
+                        self.instanceLatitude, self.instanceLongtitude, self.instanceGpsAltitude, self.instanceSatS))
+                    self.pitchRollYawText.setText("      Pitch: {}°              Roll: {}°".format(
+                        self.instancePitch, self.instanceRoll))
+
+                    # if self.progressBarCounter >= 100:
+                    #     self.progressBarCounter = 0
+                    # self.progressBar.setValue(self.progressBarCounter)
+                    # self.progressPercentLabel.setText(
+                    #     "{}%".format(self.progressBarCounter))
+                    # self.progressBarCounter += 1
+
+                    # if self.stateTableCounter > 3:
+                    #     self.stateTableCounter = 0
+                    # self.stateTable.selectRow(self.stateTableCounter)
+                    # self.stateTableCounter += 1
+
+                    self.instanceLatitude, self.instanceLongtitude = 40.739969, 30.331882  # ! Burası silinecek
+                    self.mapView.load(QUrl("https://www.openstreetmap.org/#map=14/{}/{}".format(
+                        self.instanceLatitude, self.instanceLongtitude)))
+
+                    print("SELF PRESSURE ", self.instancePressure)
+
+                    # hf.satir_ekleyen_fonksiyon(testTelemetryDatas[len(testTelemetryDatas) - 1].getDataCommaSeparated(), "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/telemetryData.txt")
+
+                    print("LIST ", testTelemetryDatas[5], testTelemetryDatas[5],
+                          testTelemetryDatas[5], testTelemetryDatas[5])
+
+            else:
+                print("[6- INFO] Visualize Passive")
+
+        else:
+            print("[6- INFO] isStartProgramActive Passive")
 
     def checkNewDataAndCreateTelemetryObject(self, listData):
-        newObject = tc.TelemetryData()
-        print("LEN: ", len(listData))
-        if len(listData) == 24:
-            if listData[0] == '1007':
-                if listData[-1] == "SON":
-                    newObject.setDatabyCommaSepratedDataList(listData)
+        # newObject = tc.TelemetryData()
+        # print("LEN: ", len(listData))
+        # if len(listData) == 24:
+        #     if listData[0] == '1007':
+        #         if listData[-1] == "SON":
+        #             newObject.setDatabyCommaSepratedDataList(listData)
 
-        current_time = QTime.currentTime()
-        time_text = current_time.toString('hh:mm:ss')
-        newObject.mission_time = time_text
-        newObject.packet_count = self.packetCount
-        self.packetCount += 1
-        return newObject
+        # current_time = QTime.currentTime()
+        # time_text = current_time.toString('hh:mm:ss')
+        # newObject.mission_time = time_text
+        # newObject.packet_count = self.packetCount
+        # self.packetCount += 1
+        # return newObject
+        pass
 
     def updaterInterface(self):
 
-        # self.newTelemetryObject = self.turnListToTelemetryObject(self.commaData)
-        self.newTelemetryObject = self.checkNewDataAndCreateTelemetryObject(
-            self.commaData)
+        # # self.newTelemetryObject = self.turnListToTelemetryObject(self.commaData)
+        # self.newTelemetryObject = self.checkNewDataAndCreateTelemetryObject(
+        #     self.commaData)
 
-        # print(self.newTelemetryObject)
-        testTelemetryDatas.append(self.newTelemetryObject)
-        print(testTelemetryDatas[len(testTelemetryDatas) - 1])
+        # # print(self.newTelemetryObject)
+        # testTelemetryDatas.append(self.newTelemetryObject)
+        # print(testTelemetryDatas[len(testTelemetryDatas) - 1])
 
-        if testTelemetryDatas[len(testTelemetryDatas) - 1].mission_time != None:
-            self.timeText.setText(
-                "Mission Time: " + testTelemetryDatas[len(testTelemetryDatas) - 1].mission_time)
-            self.telemetryTable.setRowCount(len(testTelemetryDatas))
-            for i in range(0, len(testTelemetryDatas)):
-                tempList = testTelemetryDatas[i]
-                for j in range(0, len(testTelemetryDatas[i].getDataAsList())):
-                    tabloya_eklenecek_veri = tempList.getDataAsList()
-                    tabloya_eklenecek_veri = tabloya_eklenecek_veri[j]
-                    tabloya_eklenecek_veri = QTableWidgetItem(
-                        str(tabloya_eklenecek_veri))
-                    self.telemetryTable.setItem(i, j, tabloya_eklenecek_veri)
+        # if testTelemetryDatas[len(testTelemetryDatas) - 1].mission_time != None:
+        #     self.timeText.setText(
+        #         "Mission Time: " + testTelemetryDatas[len(testTelemetryDatas) - 1].mission_time)
+        #     self.telemetryTable.setRowCount(len(testTelemetryDatas))
+        #     for i in range(0, len(testTelemetryDatas)):
+        #         tempList = testTelemetryDatas[i]
+        #         for j in range(0, len(testTelemetryDatas[i].getDataAsList())):
+        #             tabloya_eklenecek_veri = tempList.getDataAsList()
+        #             tabloya_eklenecek_veri = tabloya_eklenecek_veri[j]
+        #             tabloya_eklenecek_veri = QTableWidgetItem(
+        #                 str(tabloya_eklenecek_veri))
+        #             self.telemetryTable.setItem(i, j, tabloya_eklenecek_veri)
 
-            self.telemetryTable.setCurrentCell(len(testTelemetryDatas) - 1, 0)
-            self.instanceAltitude = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].altitude
-            self.instanceTemprature = testTelemetryDatas[i].temp
-            self.instancePressure = testTelemetryDatas[i].pressure
-            # # self.instanceAirSpeed = testTelemetryDatas[i].air_speed
-            # self.instanceVoltage = testTelemetryDatas[i].volt
-            # # self.instanceParticleCount = testTelemetryDatas[i].particle_count
-            self.instanceLatitude = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].gps_latitude
-            self.instanceLongtitude = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].gps_longitude
-            self.instanceGpsAltitude = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].gps_altitude
-            self.instanceSatS = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].gps_sats
-            self.instancePitch = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].tilt_x
-            self.instanceRoll = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].tilt_y
-            self.instanceAccelX = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].accelX
-            self.instanceAccelY = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].accelY
-            self.instanceAccelZ = testTelemetryDatas[len(
-                testTelemetryDatas) - 1].accelZ
-            print("ACCEL X Y Z ", self.instanceAccelX,
-                  self.instanceAccelX, self.instanceAccelX)
+        #     self.telemetryTable.setCurrentCell(len(testTelemetryDatas) - 1, 0)
+        #     self.instanceAltitude = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].altitude
+        #     self.instanceTemprature = testTelemetryDatas[i].temp
+        #     self.instancePressure = testTelemetryDatas[i].pressure
+        #     # # self.instanceAirSpeed = testTelemetryDatas[i].air_speed
+        #     # self.instanceVoltage = testTelemetryDatas[i].volt
+        #     # # self.instanceParticleCount = testTelemetryDatas[i].particle_count
+        #     self.instanceLatitude = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].gps_latitude
+        #     self.instanceLongtitude = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].gps_longitude
+        #     self.instanceGpsAltitude = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].gps_altitude
+        #     self.instanceSatS = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].gps_sats
+        #     self.instancePitch = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].tilt_x
+        #     self.instanceRoll = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].tilt_y
+        #     self.instanceAccelX = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].accelX
+        #     self.instanceAccelY = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].accelY
+        #     self.instanceAccelZ = testTelemetryDatas[len(
+        #         testTelemetryDatas) - 1].accelZ
+        #     print("ACCEL X Y Z ", self.instanceAccelX,
+        #           self.instanceAccelX, self.instanceAccelX)
 
-            self.altitudeText.setText(
-                "Altitude: {} m".format(self.instanceAltitude))
-            self.latitudeLongitudeAltitudeSatsText.setText("Lat: {}  Long: {}  Alt: {} m  Sats: {}".format(
-                self.instanceLatitude, self.instanceLongtitude, self.instanceGpsAltitude, self.instanceSatS))
-            self.pitchRollYawText.setText("      Pitch: {}°              Roll: {}°".format(
-                self.instancePitch, self.instanceRoll))
+        #     self.altitudeText.setText(
+        #         "Altitude: {} m".format(self.instanceAltitude))
+        #     self.latitudeLongitudeAltitudeSatsText.setText("Lat: {}  Long: {}  Alt: {} m  Sats: {}".format(
+        #         self.instanceLatitude, self.instanceLongtitude, self.instanceGpsAltitude, self.instanceSatS))
+        #     self.pitchRollYawText.setText("      Pitch: {}°              Roll: {}°".format(
+        #         self.instancePitch, self.instanceRoll))
 
-            # if self.progressBarCounter >= 100:
-            #     self.progressBarCounter = 0
-            # self.progressBar.setValue(self.progressBarCounter)
-            # self.progressPercentLabel.setText(
-            #     "{}%".format(self.progressBarCounter))
-            # self.progressBarCounter += 1
+        #     # if self.progressBarCounter >= 100:
+        #     #     self.progressBarCounter = 0
+        #     # self.progressBar.setValue(self.progressBarCounter)
+        #     # self.progressPercentLabel.setText(
+        #     #     "{}%".format(self.progressBarCounter))
+        #     # self.progressBarCounter += 1
 
-            # if self.stateTableCounter > 3:
-            #     self.stateTableCounter = 0
-            # self.stateTable.selectRow(self.stateTableCounter)
-            # self.stateTableCounter += 1
+        #     # if self.stateTableCounter > 3:
+        #     #     self.stateTableCounter = 0
+        #     # self.stateTable.selectRow(self.stateTableCounter)
+        #     # self.stateTableCounter += 1
 
-            self.instanceLatitude, self.instanceLongtitude = 40.739969, 30.331882  # ! Burası silinecek
-            self.mapView.load(QUrl("https://www.openstreetmap.org/#map=14/{}/{}".format(
-                self.instanceLatitude, self.instanceLongtitude)))
+        #     self.instanceLatitude, self.instanceLongtitude = 40.739969, 30.331882  # ! Burası silinecek
+        #     self.mapView.load(QUrl("https://www.openstreetmap.org/#map=14/{}/{}".format(
+        #         self.instanceLatitude, self.instanceLongtitude)))
 
-            print("SELF PRESSURE ", self.instancePressure)
+        #     print("SELF PRESSURE ", self.instancePressure)
 
-            # hf.satir_ekleyen_fonksiyon(testTelemetryDatas[len(testTelemetryDatas) - 1].getDataCommaSeparated(), "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/telemetryData.txt")
+        #     # hf.satir_ekleyen_fonksiyon(testTelemetryDatas[len(testTelemetryDatas) - 1].getDataCommaSeparated(), "/Users/agahozdemir/Documents/Programming/Turkish-Defenders-CanSAT-GCS-GUI/telemetryData.txt")
 
-            print("LIST ", testTelemetryDatas[5], testTelemetryDatas[5],
-                  testTelemetryDatas[5], testTelemetryDatas[5])
-        else:
-            print(" [INFO] None Data Error")
+        #     print("LIST ", testTelemetryDatas[5], testTelemetryDatas[5],
+        #           testTelemetryDatas[5], testTelemetryDatas[5])
+        # else:
+        #     print(" [INFO] None Data Error")
 
-    def playAudioFile(self):
-        # full_file_path = os.path.join(os.getcwd(), '/Users/agahozdemir/Desktop/Sakarya University.mp3')
-        # url = QUrl.fromLocalFile(full_file_path)
-        # content = QMediaContent(url)
-
-        # self.player.setMedia(content)
-        # self.player.play()
         pass
 
     def update_battery_percentage(self):
@@ -746,6 +873,15 @@ class Example(QMainWindow):
         current_time = QTime.currentTime()
         time_text = current_time.toString('hh:mm:ss')
         self.timeLabel.setText(time_text)
+
+    def playAudioFile(self):
+        # full_file_path = os.path.join(os.getcwd(), '/Users/agahozdemir/Desktop/Sakarya University.mp3')
+        # url = QUrl.fromLocalFile(full_file_path)
+        # content = QMediaContent(url)
+
+        # self.player.setMedia(content)
+        # self.player.play()
+        pass
 
     def showExitDialog(self):
         msgBox = QMessageBox()
@@ -777,30 +913,6 @@ class BlackWidget(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.fillRect(self.rect(), QBrush(QColor(30, 30, 30)))
-
-
-class VTKWidget(QVTKRenderWindowInteractor):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        renderer = vtk.vtkRenderer()
-        self.GetRenderWindow().AddRenderer(renderer)
-
-        reader = vtk.vtkOBJReader()
-        reader.SetFileName("DigerDosyalar/model1.obj")
-        reader.Update()
-
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputData(reader.GetOutput())
-
-        actor = vtk.vtkActor()
-        actor.SetMapper(mapper)
-
-        renderer.AddActor(actor)
-
-        renderer.SetBackground(0.2, 0.3, 0.4)
-
-        self.Initialize()
-        self.Start()
 
 
 if __name__ == '__main__':
